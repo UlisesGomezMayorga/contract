@@ -87,7 +87,7 @@ label{
 
 	    <form id="contractForm">
 	    <h1>Completa el formulario para firmar tu contrato.</h1><br>
-
+	        <h2><a href="https://www.remove.bg/es">Quitar fondo de la firma.</a></h2>
 	    	
 	        <label for="contractUpload">Contrato en formato PDF</label>
 	        <input type="file" id="contractUpload" name="contractUpload" accept="application/pdf" required><br><br>
@@ -163,7 +163,7 @@ label{
 					for (let i = 0; i < pages.length - 1; i++) {
                         const page = pages[i];
                         const { height } = page.getSize();
-                        const x = 5; // Margen izquierdo
+                        const x = 2; // Margen izquierdo
                         const y = height / 2 - (imageDims.height / 2); // Coloca en la mitad de la página verticalmente
 
                         page.drawImage(image, {
