@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contract Signer</title>
+</head>
+<body>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+    }
+      *{
+      margin:0;
+      padding:0;
+      box-sizing: border-box;
+      color: black;
+      font-family: sans-serif;
+  }
+
+  header{
+    height: 15vh;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+      padding: 2vw;
+      border-bottom: 1px gray solid;
+  }
+  a{
+    text-decoration: none;
+    color: black;
+  }
+  .btn{
+      padding: 10px 20px;
+      font-size: 2vh;
+      cursor: pointer;
+      border: none;
+      background-color: black;
+      color: white;
+      border-radius: 5px;
+  }
+    .content{
+    min-height: 85vh;
+    background-color: #eeeeee;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+    .cuadro{
+    display: flex;
+    background-color: white;
+    width: 40%;
+    overflow-y: auto;
+    /*min-height: 70%;*/
+    height: 70vh;
+    border-radius: 2vw;
+    padding: 3%;
+    gap:3vh;
+  }
+form#contractForm {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 1%; 
+    font-size: 15pt;
+}
+input{
+    height: 6%;
+    font-size: 15pt;
+    padding: 1%;
+}
+  option{
+    color: white;
+  }
+label{
+	font-weight: bold;
+}
+  </style>
+
+	<header>
+		<h1 id="logo"><a href="/">Contract Signer</a></h1>
+		<h3>Firma tu contrato con Contract Signer</h3>
+	</header>
+<div class="content">
+    <div class="cuadro">
+
+	    <form id="contractForm">
+	    <h1>Completa el formulario para firmar tu contrato.</h1><br>
+
+	    	
+	        <label for="contractUpload">Contrato en formato PDF</label>
+	        <input type="file" id="contractUpload" name="contractUpload" accept="application/pdf" required><br><br>
+
+	        <label for="imageUpload">Firma o Logo en PNG</label>
+	        <input type="file" id="imageUpload" name="imageUpload" accept="image/png, image/jpeg" required><br><br>
+
+	        <label for="aclaracion">Aclaración de la firma</label>
+	        <input type="text" id="aclaracion" required name="aclaracion"><br><br>
+
+	        <label for="dni">DNI</label>
+	        <input type="number" id="dni" required name="dni"><br><br>
+	    	
+
+
+	        <button type="submit" class="btn">Generar Contrato</button><br>
+	    </form>
+</div></div>
+    <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
+    <script>
+        document.getElementById('contractForm').addEventListener('submit', async function (event) {
+            event.preventDefault();
+
+            const contractInput = document.getElementById('contractUpload');
+            const imageInput = document.getElementById('imageUpload');
+
+            const aclaracion = document.getElementById('aclaracion').value;
+
+            const dni = document.getElementById('dni').value;
+
+            const aclaracionydni = aclaracion + '\n' + dni;
+
+
+            const contractFile = contractInput.files[0];
+            const imageFile = imageInput.files[0];
+
+            if (!contractFile || !imageFile) {
+                alert('Por favor, sube el contrato y la imagen.');
+                return;
+            }
+
+            // Leer el archivo PDF del contrato
+            const contractReader = new FileReader();
+            contractReader.readAsArrayBuffer(contractFile);
+
+            contractReader.onloadend = async function () {
+                const contractBytes = contractReader.result;
+
+                // Leer la imagen (firma o logo)
+                const imageReader = new FileReader();
+                imageReader.readAsArrayBuffer(imageFile);
+
+                imageReader.onloadend = async function () {
+                    const imageBytes = imageReader.result;
+
+                    // Cargar el archivo PDF del contrato subido
+                    const pdfDoc = await PDFLib.PDFDocument.load(contractBytes);
+
+                    // Verificar el formato de la imagen (PNG o JPG)
+                    let image;
+                    if (imageFile.type === 'image/png') {
+                        image = await pdfDoc.embedPng(imageBytes);
+                    } else if (imageFile.type === 'image/jpeg') {
+                        image = await pdfDoc.embedJpg(imageBytes);
+                    }
+
+                    const imageDims = image.scale(0.3); // Ajusta el tamaño de la imagen (escala 20%)
+
+                    // Obtener todas las páginas del contrato
+                    const pages = pdfDoc.getPages();
+
+                    // Insertar imagen en todas las páginas
+					for (let i = 0; i < pages.length - 1; i++) {
+                        const page = pages[i];
+                        const { height } = page.getSize();
+                        const x = 5; // Margen izquierdo
+                        const y = height / 2 - (imageDims.height / 2); // Coloca en la mitad de la página verticalmente
+
+                        page.drawImage(image, {
+                            x: x,
+                            y: y,
+                            width: imageDims.width,
+                            height: imageDims.height,
+                        });
+                    };
+					const lastPage = pages[pages.length - 1];
+
+	                lastPage.drawText(`${aclaracionydni}`, {
+	                    x: 200, // Posición en el margen izquierdo
+	                    y: 55, // Posición en la mitad vertical
+	                    size: 12,
+	                    color: PDFLib.rgb(0, 0, 0),
+	                });
+                    let finalSign = image.scale(0.4); // Ajusta el tamaño de la imagen (escala 20%)
+
+                    lastPage.drawImage(image, {
+                            x: 200,
+                            y: 20,
+                            width: finalSign.width,
+                            height: finalSign.height,
+                        });
+
+                    // Serializar el PDF a bytes
+                    const pdfBytes = await pdfDoc.save();
+
+                    // Descargar el archivo PDF generado
+                    const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = 'contrato_modificado_con_imagen.pdf';
+                    link.click();
+                };
+            };
+        });
+    </script>
+</body>
+</html>
